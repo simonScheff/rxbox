@@ -1,0 +1,31 @@
+{
+  "name": "rxbox",
+  "version": "0.0.1",
+  "description": "state container for Angular2",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ariel Henryson",
+  "license": "ISC",
+  "dependencies": {
+    "deep-equal": "^1.0.1",
+    "immutable": "^3.8.1",
+    "rxjs": "^5.0.0-beta.12"
+  },
+  "keywords": [
+    "store",
+    "angular store",
+    "angular 2 store",
+    "state",
+    "immutable"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/arielhenryson/socotra-store.git"
+  },
+  "main": "index.js",
+  "typings": "index.d.ts",
+  "devDependencies": {
+    "typescript": "^2.0.3"
+  }
+}
