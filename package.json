@@ -21,7 +21,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/arielhenryson/socotra-store.git"
+    "url": "git://github.com/arielhenryson/rxbox.git"
   },
   "main": "index.js",
   "typings": "index.d.ts",
