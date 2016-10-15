@@ -1,6 +1,4 @@
 import {BehaviorSubject, Observable} from "rxjs";
-import Immutable = require("immutable");
-import deepEqual = require("deep-equal");
 
 const appState = {};
 const store = new BehaviorSubject<any>(appState);
@@ -25,12 +23,47 @@ const objectKeyByString = function(o, s) {
     }
 };
 
+Object.equals = function( x, y ) {
+    if ( x === y ) return true;
+    // if both x and y are null or undefined and exactly the same
 
-export default class SocotraStore {
+    if ( ! ( x instanceof Object ) || ! ( y instanceof Object ) ) return false;
+    // if they are not strictly equal, they both need to be Objects
+
+    if ( x.constructor !== y.constructor ) return false;
+    // they must have the exact same prototype chain, the closest we can do is
+    // test there constructor.
+
+    for ( var p in x ) {
+        if ( ! x.hasOwnProperty( p ) ) continue;
+        // other properties were tested using x.constructor === y.constructor
+
+        if ( ! y.hasOwnProperty( p ) ) return false;
+        // allows to compare x[ p ] and y[ p ] when set to undefined
+
+        if ( x[ p ] === y[ p ] ) continue;
+        // if they have the same strict value or identity then they are equal
+
+        if ( typeof( x[ p ] ) !== "object" ) return false;
+        // Numbers, Strings, Functions, Booleans must be strictly equal
+
+        if ( ! Object.equals( x[ p ],  y[ p ] ) ) return false;
+        // Objects and Arrays must be tested recursively
+    }
+
+    for ( p in y ) {
+        if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
+        // allows x[ p ] to be set to undefined
+    }
+    return true;
+}
+
+
+export default class RXBox {
     constructor() {
         if (typeof window !== "undefined") {
             ((window: any) => {
-                window.SocotraStore = {
+                window.RXBox = {
                     state: this.store,
                     history: this.history
                 };
@@ -38,7 +71,7 @@ export default class SocotraStore {
         }
     }
 
-    private lastChnages = null;
+    private lastChanges = null;
 
     private store = store;
 
@@ -51,12 +84,6 @@ export default class SocotraStore {
 
     // push old state to history
     private pushHistory() {
-        const self = this;
-
-        (function(window: any){
-            window.storeHistory = self.history;
-        })(window);
-
         // prevent save more then one version in the history when not
         // running in debug mode
         if (!this.debug && this.history.length > 0) {
@@ -64,13 +91,17 @@ export default class SocotraStore {
         }
 
 
-
         let state;
         if (!this.history.length) {
-            state = Immutable.fromJS(this.getState());
+            state = this.getState();
         } else {
             const oldState = this.history[this.history.length - 1];
-            state = oldState.mergeDeep(this.getState());
+            state = Object.assign({}, oldState, this.getState());
+
+            const noChangeInState = Object.equals(oldState, state);
+            if (noChangeInState) {
+                return;
+            }
         }
 
         this.history.push(state);
@@ -108,17 +139,19 @@ export default class SocotraStore {
                 // if we inside this catch meaning that the key to watch
                 // is not inside the last change so we can return
                 // without response to the subscribers
-                const isKeyInLastChange = objectKeyByString(this.lastChnages, key);
+                const isKeyInLastChange = objectKeyByString(this.lastChanges, key);
                 if(typeof isKeyInLastChange === "undefined") {
                     return
                 }
 
 
-                const newValue = JSON.stringify(objectKeyByString(state, key));
+                const newValue = objectKeyByString(state, key);
                 const oldState = this.history[this.history.length - 1];
-                const oldValue = JSON.stringify(objectKeyByString(oldState, key));
+                const oldValue = objectKeyByString(oldState, key);
 
-                if (newValue !== oldValue) {
+
+                const equals = Object.equals(newValue, oldValue);
+                if (!equals) {
                     observer.next(objectKeyByString(state, key));
                 }
             });
@@ -145,16 +178,11 @@ export default class SocotraStore {
         // prevent push if there is no change detected in the new version
         if (this.history.length) {
             const oldState = this.history[this.history.length - 1];
-
-            const equal = deepEqual(oldState.toJSON(), newState);
-            if (equal) {
-                return;
-            }
         }
 
         this.pushHistory();
 
-        this.lastChnages = stateChanges;
+        this.lastChanges = stateChanges;
         this.store.next(newState);
     }
 }
