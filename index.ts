@@ -1,62 +1,7 @@
-import {BehaviorSubject, Observable} from "rxjs";
+import { BehaviorSubject, Observable } from "rxjs";
 
 const appState = {};
 const store = new BehaviorSubject<any>(appState);
-
-
-const objectKeyByString = function(o, s) {
-    try {
-        s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
-        s = s.replace(/^\./, '');           // strip a leading dot
-        var a = s.split('.');
-        for (var i = 0, n = a.length; i < n; ++i) {
-            var k = a[i];
-            if (k in o) {
-                o = o[k];
-            } else {
-                return;
-            }
-        }
-        return o;
-    } catch (e) {
-        return;
-    }
-};
-
-Object.equals = function( x, y ) {
-    if ( x === y ) return true;
-    // if both x and y are null or undefined and exactly the same
-
-    if ( ! ( x instanceof Object ) || ! ( y instanceof Object ) ) return false;
-    // if they are not strictly equal, they both need to be Objects
-
-    if ( x.constructor !== y.constructor ) return false;
-    // they must have the exact same prototype chain, the closest we can do is
-    // test there constructor.
-
-    for ( var p in x ) {
-        if ( ! x.hasOwnProperty( p ) ) continue;
-        // other properties were tested using x.constructor === y.constructor
-
-        if ( ! y.hasOwnProperty( p ) ) return false;
-        // allows to compare x[ p ] and y[ p ] when set to undefined
-
-        if ( x[ p ] === y[ p ] ) continue;
-        // if they have the same strict value or identity then they are equal
-
-        if ( typeof( x[ p ] ) !== "object" ) return false;
-        // Numbers, Strings, Functions, Booleans must be strictly equal
-
-        if ( ! Object.equals( x[ p ],  y[ p ] ) ) return false;
-        // Objects and Arrays must be tested recursively
-    }
-
-    for ( p in y ) {
-        if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
-        // allows x[ p ] to be set to undefined
-    }
-    return true;
-}
 
 
 export default class RXBox {
@@ -71,37 +16,53 @@ export default class RXBox {
         }
     }
 
+
+    private static equals(x, y) {
+        return JSON.stringify(x) === JSON.stringify(y);
+    }
+
+
+    private static objectKeyByString(o, s) {
+        try {
+            s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
+            s = s.replace(/^\./, '');           // strip a leading dot
+            var a = s.split('.');
+            for (var i = 0, n = a.length; i < n; ++i) {
+                var k = a[i];
+                if (k in o) {
+                    o = o[k];
+                } else {
+                    return;
+                }
+            }
+            return o;
+        } catch (e) {
+            return;
+        }
+    }
+
+
     private lastChanges = null;
 
-    private store = store;
+
+    private store: any = store;
+
 
     // old the history of the app state
     // only work when debug is set to true
     private history = [];
 
+
     // Observable that watch for any change in the store
     private changes = store.asObservable().distinctUntilChanged();
 
+
     // push old state to history
-    private pushHistory() {
+    private pushHistory(state) {
         // prevent save more then one version in the history when not
         // running in debug mode
-        if (!this.debug && this.history.length > 0) {
+        if (!this.debug && this.history.length) {
             this.history.shift();
-        }
-
-
-        let state;
-        if (!this.history.length) {
-            state = this.getState();
-        } else {
-            const oldState = this.history[this.history.length - 1];
-            state = Object.assign({}, oldState, this.getState());
-
-            const noChangeInState = Object.equals(oldState, state);
-            if (noChangeInState) {
-                return;
-            }
         }
 
         this.history.push(state);
@@ -113,10 +74,12 @@ export default class RXBox {
     // change this for true when you want to push to history
     debug = false;
 
+
     // show the history of the state
     getHistory() {
         return this.history;
     }
+
 
     // remove all state history
     clearHistory() {
@@ -129,30 +92,31 @@ export default class RXBox {
     watch(key?: any) {
         return Observable.create(observer => {
             this.changes.subscribe(state => {
-
                 // watch for all change (no key specified)
                 if (typeof key === "undefined") {
                     observer.next(state);
                     return;
                 }
 
-                // if we inside this catch meaning that the key to watch
-                // is not inside the last change so we can return
+
+                // if typeof isKeyInLastChange === "undefined"
+                // we are not watching this value so we can return
                 // without response to the subscribers
-                const isKeyInLastChange = objectKeyByString(this.lastChanges, key);
+                const isKeyInLastChange = RXBox.objectKeyByString(this.lastChanges, key);
                 if(typeof isKeyInLastChange === "undefined") {
                     return
                 }
 
 
-                const newValue = objectKeyByString(state, key);
+                const newValue = RXBox.objectKeyByString(state, key);
                 const oldState = this.history[this.history.length - 1];
-                const oldValue = objectKeyByString(oldState, key);
+                const oldValue = RXBox.objectKeyByString(oldState, key);
 
 
-                const equals = Object.equals(newValue, oldValue);
+                const equals = RXBox.equals(newValue, oldValue);
                 if (!equals) {
-                    observer.next(objectKeyByString(state, key));
+                    observer.next(RXBox.objectKeyByString(state, key));
+                    this.pushHistory(state);
                 }
             });
         });
@@ -161,7 +125,7 @@ export default class RXBox {
 
     // return current state
     getState() {
-        return this.store.value;
+        return JSON.parse(JSON.stringify(this.store.value));
     }
 
 
@@ -173,16 +137,45 @@ export default class RXBox {
 
     // merge new keys to the current state
     assignState(stateChanges: Object) {
-        const newState = Object.assign({}, this.getState(), stateChanges);
-
-        // prevent push if there is no change detected in the new version
-        if (this.history.length) {
-            const oldState = this.history[this.history.length - 1];
-        }
-
-        this.pushHistory();
-
         this.lastChanges = stateChanges;
+        const newState = Object.assign({}, this.getState(), stateChanges);
         this.store.next(newState);
     }
+}
+
+
+
+
+
+if (!Object.assign) {
+    Object.defineProperty(Object, 'assign', {
+        enumerable: false,
+        configurable: true,
+        writable: true,
+        value: function(target) {
+            'use strict';
+            if (target === undefined || target === null) {
+                throw new TypeError('Cannot convert first argument to object');
+            }
+
+            var to = Object(target);
+            for (var i = 1; i < arguments.length; i++) {
+                var nextSource = arguments[i];
+                if (nextSource === undefined || nextSource === null) {
+                    continue;
+                }
+                nextSource = Object(nextSource);
+
+                var keysArray = Object.keys(Object(nextSource));
+                for (var nextIndex = 0, len = keysArray.length; nextIndex < len; nextIndex++) {
+                    var nextKey = keysArray[nextIndex];
+                    var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
+                    if (desc !== undefined && desc.enumerable) {
+                        to[nextKey] = nextSource[nextKey];
+                    }
+                }
+            }
+            return to;
+        }
+    });
 }
