@@ -1,6 +1,6 @@
 {
   "name": "rxbox",
-  "version": "0.0.9",
+  "version": "0.0.13",
   "description": "state container for Angular2",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -8,7 +8,7 @@
   "author": "Ariel Henryson",
   "license": "ISC",
   "dependencies": {
-    "rxjs": "^5.0.0-beta.12"
+    "rxjs": "^5.0.0-rc.2"
   },
   "keywords": [
     "store",

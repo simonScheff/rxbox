@@ -16,6 +16,31 @@ export default class RXBox {
         }
     }
 
+    private static clone(obj) {
+        try {
+            return JSON.parse(JSON.stringify(obj));
+        } catch (e) {
+            throw "RXBox error -> set RXBOX.debug to true for more information"
+        }
+
+    }
+
+    private static preventFunctionsInKey(obj) {
+        for (let i in obj) {
+            if (obj[i] !== null && typeof obj[i] === "object") {
+                RXBox.preventFunctionsInKey(obj[i]);
+            }
+
+            if (typeof obj[i] === "function") {
+                throw {
+                    msg:"RXBox error -> can't store function inside RXBox store",
+                    object: obj,
+                    key: obj[i]
+                };
+            }
+        }
+    }
+
 
     private static equals(x, y) {
         if ( x === y ) return true;
@@ -157,7 +182,7 @@ export default class RXBox {
 
     // return current state
     getState() {
-        return JSON.parse(JSON.stringify(this.store.value));
+        return RXBox.clone(this.store.value);
     }
 
 
@@ -169,6 +194,10 @@ export default class RXBox {
 
     // merge new keys to the current state
     assignState(stateChanges: Object) {
+        if (this.debug) {
+            RXBox.preventFunctionsInKey(stateChanges);
+        }
+
         this.lastChanges = stateChanges;
         const newState = Object.assign({}, this.getState(), stateChanges);
         this.store.next(newState);
@@ -177,7 +206,10 @@ export default class RXBox {
 
 
 
-
+declare let Object:any;
+interface ObjectConstructor {
+    assign(target: any, ...sources: any[]): any;
+}
 
 if (!Object.assign) {
     Object.defineProperty(Object, 'assign', {
