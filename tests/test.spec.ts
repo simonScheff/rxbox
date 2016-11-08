@@ -21,5 +21,5 @@ describe('test RXBox Class', () => {
         );
 
         this._store.assignState({foo: 1});
-    })
+    });
 });

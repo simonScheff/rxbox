@@ -1,6 +1,6 @@
 {
   "name": "rxbox",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "state container for Angular2",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
