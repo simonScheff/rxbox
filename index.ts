@@ -4,6 +4,7 @@ const appState = {};
 const store = new BehaviorSubject<any>(appState);
 
 
+
 export default class RXBox {
     constructor() {
         if (typeof window !== "undefined") {
@@ -16,14 +17,9 @@ export default class RXBox {
         }
     }
 
-    private static clone(obj) {
-        try {
-            return JSON.parse(JSON.stringify(obj));
-        } catch (e) {
-            throw "RXBox error -> set RXBOX.debug to true for more information"
-        }
+    private lastChanges = null;
 
-    }
+    private store: any = store;
 
     private static preventFunctionsInKey(obj) {
         for (let i in obj) {
@@ -41,68 +37,84 @@ export default class RXBox {
         }
     }
 
-
-    private static equals(x, y) {
-        if ( x === y ) return true;
-        // if both x and y are null or undefined and exactly the same
-
-        if ( ! ( x instanceof Object ) || ! ( y instanceof Object ) ) return false;
-        // if they are not strictly equal, they both need to be Objects
-
-        if ( x.constructor !== y.constructor ) return false;
-        // they must have the exact same prototype chain, the closest we can do is
-        // test there constructor.
-
-        for (var p in x) {
-            if ( ! x.hasOwnProperty( p ) ) continue;
-            // other properties were tested using x.constructor === y.constructor
-
-            if ( ! y.hasOwnProperty( p ) ) return false;
-            // allows to compare x[ p ] and y[ p ] when set to undefined
-
-            if ( x[ p ] === y[ p ] ) continue;
-            // if they have the same strict value or identity then they are equal
-
-            if ( typeof( x[ p ] ) !== "object" ) return false;
-            // Numbers, Strings, Functions, Booleans must be strictly equal
-
-            if ( ! RXBox.equals( x[ p ],  y[ p ] ) ) return false;
-            // Objects and Arrays must be tested recursively
-        }
-
-        for (p in y) {
-            if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
-            // allows x[ p ] to be set to undefined
-        }
-
-        return true;
-    }
-
-
     private static objectKeyByString(o, s) {
         try {
             s = s.replace(/\[(\w+)\]/g, '.$1'); // convert indexes to properties
-            s = s.replace(/^\./, '');           // strip a leading dot
+            s = s.replace(/^\./, ''); // strip a leading dot
             var a = s.split('.');
             for (var i = 0, n = a.length; i < n; ++i) {
                 var k = a[i];
                 if (k in o) {
                     o = o[k];
-                } else {
+                }
+                else {
                     return;
                 }
             }
             return o;
-        } catch (e) {
+        }
+        catch (e) {
             return;
         }
     }
 
+    private static equals(x, y) {
+        if (x === y)
+            return true;
+        // if both x and y are null or undefined and exactly the same
+        if (!(x instanceof Object) || !(y instanceof Object))
+            return false;
+        // if they are not strictly equal, they both need to be Objects
+        if (x.constructor !== y.constructor)
+            return false;
+        // they must have the exact same prototype chain, the closest we can do is
+        // test there constructor.
 
-    private lastChanges = null;
+        let p;
+        for (p in x) {
+            if (!x.hasOwnProperty(p))
+                continue;
+            // other properties were tested using x.constructor === y.constructor
+            if (!y.hasOwnProperty(p))
+                return false;
+            // allows to compare x[ p ] and y[ p ] when set to undefined
+            if (x[p] === y[p])
+                continue;
+            // if they have the same strict value or identity then they are equal
+            if (typeof (x[p]) !== "object")
+                return false;
+            // Numbers, Strings, Functions, Booleans must be strictly equal
+            if (!RXBox.equals(x[p], y[p]))
+                return false;
+        }
+        for (p in y) {
+            if (y.hasOwnProperty(p) && !x.hasOwnProperty(p))
+                return false;
+        }
+        return true;
+    }
 
+    private static clone(obj: any) {
+        if (obj === null || typeof(obj) !== 'object' || 'isActiveClone' in obj)
+            return obj;
 
-    private store: any = store;
+        let temp;
+        if (obj instanceof Date) {
+            temp = new obj.constructor(); //or new Date(obj);
+        } else {
+            temp = obj.constructor();
+        }
+
+        for (let key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                obj['isActiveClone'] = null;
+                temp[key] = RXBox.clone(obj[key]);
+                delete obj['isActiveClone'];
+            }
+        }
+
+        return temp;
+    }
 
 
     // old the history of the app state
@@ -115,13 +127,14 @@ export default class RXBox {
 
 
     // push old state to history
-    private pushHistory(state) {
+    private pushHistory() {
         // prevent save more then one version in the history when not
         // running in debug mode
         if (!this.debug && this.history.length) {
             this.history.shift();
         }
 
+        const state = this.getState();
         this.history.push(state);
     }
 
@@ -148,6 +161,10 @@ export default class RXBox {
     // like "key1.key2.key3")
     watch(key?: any) {
         return Observable.create(observer => {
+            if (typeof window === "undefined") {
+                throw "RXBox can't run watch in server code";
+            }
+
             this.changes.subscribe(state => {
                 // watch for all change (no key specified)
                 if (typeof key === "undefined") {
@@ -156,24 +173,20 @@ export default class RXBox {
                 }
 
 
-                // if typeof isKeyInLastChange === "undefined"
-                // we are not watching this value so we can return
+                // if we inside this catch meaning that the key to watch
+                // is not inside the last change so we can return
                 // without response to the subscribers
                 const isKeyInLastChange = RXBox.objectKeyByString(this.lastChanges, key);
-                if(typeof isKeyInLastChange === "undefined") {
-                    return
+                if (typeof isKeyInLastChange === "undefined") {
+                    return;
                 }
-
 
                 const newValue = RXBox.objectKeyByString(state, key);
                 const oldState = this.history[this.history.length - 1];
                 const oldValue = RXBox.objectKeyByString(oldState, key);
-
-
                 const equals = RXBox.equals(newValue, oldValue);
                 if (!equals) {
                     observer.next(RXBox.objectKeyByString(state, key));
-                    this.pushHistory(state);
                 }
             });
         });
@@ -194,12 +207,18 @@ export default class RXBox {
 
     // merge new keys to the current state
     assignState(stateChanges: Object) {
+        if (typeof window === "undefined") {
+            throw "RXBox can't run assignState in server code";
+        }
+
         if (this.debug) {
             RXBox.preventFunctionsInKey(stateChanges);
         }
 
-        this.lastChanges = stateChanges;
         const newState = Object.assign({}, this.getState(), stateChanges);
+
+        this.pushHistory();
+        this.lastChanges = stateChanges;
         this.store.next(newState);
     }
 }
@@ -210,7 +229,6 @@ declare let Object:any;
 interface ObjectConstructor {
     assign(target: any, ...sources: any[]): any;
 }
-
 if (!Object.assign) {
     Object.defineProperty(Object, 'assign', {
         enumerable: false,

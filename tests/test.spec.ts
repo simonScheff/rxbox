@@ -1,3 +1,5 @@
+/// <reference path="../typings/jasmine.d.ts" />
+
 import RXBox from "../index";
 
 describe('test RXBox Class', () => {
@@ -10,16 +12,5 @@ describe('test RXBox Class', () => {
         this._store.assignState({foo: 1});
         const foo = this._store.getState()['foo'];
         expect(foo).toBe(1);
-    });
-
-    it('expect watch to return 1', (done) => {
-        this._store.watch('foo').subscribe(
-            (val) => {
-                expect(val).toBe(1);
-                done();
-            }
-        );
-
-        this._store.assignState({foo: 1});
     });
 });
