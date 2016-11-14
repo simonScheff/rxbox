@@ -6,7 +6,15 @@ const store = new BehaviorSubject<any>(appState);
 
 
 export default class RXBox {
+    private static isWasRun: boolean = false;
+
     constructor() {
+        if (RXBox.isWasRun) {
+            throw "You can only create one instance of RXBox in your app";
+        }
+
+        RXBox.isWasRun = true;
+
         if (typeof window !== "undefined") {
             ((window: any) => {
                 window.RXBox = {
