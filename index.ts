@@ -9,7 +9,7 @@ export default class RXBox {
     private static isWasRun: boolean = false;
 
     constructor() {
-        if (RXBox.isWasRun) {
+        if (RXBox.isWasRun && typeof window !== "undefined") {
             throw "You can only create one instance of RXBox in your app";
         }
 

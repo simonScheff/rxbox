@@ -1,6 +1,6 @@
 {
   "name": "rxbox",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "state container for Angular2",
   "scripts": {
     "test": "karma start"
