@@ -79,6 +79,18 @@ If you want to use the state history  feature, you have to first set debug to tr
 this._store.debug = true;
 ```
 
+## sessionStorage
+save the store to the sessionStorage
+```javascript
+this._store.sessionStorage = true;
+```
+
+## localStorage
+save the store to the localStorage
+```javascript
+this._store.localStorage = true;
+```
+
 ## getHistory()
 Show the history of the state (first you have to set debug to true)
 ```javascript

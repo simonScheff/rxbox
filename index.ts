@@ -152,6 +152,12 @@ export default class RXBox {
     // change this for true when you want to push to history
     debug = false;
 
+    // save to sessionStorage
+    sessionStorage = false;
+
+    // save to localStorage
+    localStorage = false;
+
 
     // show the history of the state
     getHistory() {
@@ -227,7 +233,17 @@ export default class RXBox {
 
         this.pushHistory();
         this.lastChanges = stateChanges;
+
         this.store.next(newState);
+
+        const newStateString = JSON.stringify(this.getState());
+        if (this.sessionStorage) {
+            sessionStorage.setItem('_rxbox', newStateString);
+        }
+
+        if (this.localStorage) {
+            localStorage.setItem('_rxbox', newStateString);
+        }
     }
 }
 
