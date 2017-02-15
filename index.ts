@@ -235,15 +235,6 @@ export default class RXBox {
         this.lastChanges = stateChanges;
 
         this.store.next(newState);
-
-        const newStateString = JSON.stringify(this.getState());
-        if (this.sessionStorage) {
-            sessionStorage.setItem('_rxbox', newStateString);
-        }
-
-        if (this.localStorage) {
-            localStorage.setItem('_rxbox', newStateString);
-        }
     }
 }
 
