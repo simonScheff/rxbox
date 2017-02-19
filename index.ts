@@ -1,8 +1,8 @@
 import { BehaviorSubject, Observable } from "rxjs";
+const stringifyDate = require('json-stringify-date');
 
 const appState = {};
 const store = new BehaviorSubject<any>(appState);
-
 
 
 export default class RXBox {
@@ -28,6 +28,9 @@ export default class RXBox {
     private lastChanges = null;
 
     private store: any = store;
+
+    private saveToLocalStorage: boolean = false;
+    private saveToSessionStorage: boolean = false;
 
     private static preventFunctionsInKey(obj) {
         for (let i in obj) {
@@ -235,6 +238,22 @@ export default class RXBox {
         this.lastChanges = stateChanges;
 
         this.store.next(newState);
+
+        if (this.saveToLocalStorage) {
+            localStorage.setItem("__rxbox", stringifyDate.stringify(this.getState()));
+        }
+
+        if (this.saveToSessionStorage) {
+            sessionStorage.setItem("__rxbox", stringifyDate.stringify(this.getState()));
+        }
+    }
+
+    getStoreFromSessionStorage() {
+        return stringifyDate.parse(sessionStorage.getItem("__rxbox"));
+    }
+
+    getStoreFromLocalStorage() {
+        return stringifyDate.parse(localStorage.getItem("__rxbox"));
     }
 }
 

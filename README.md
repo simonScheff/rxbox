@@ -82,14 +82,22 @@ this._store.debug = true;
 ## sessionStorage
 save the store to the sessionStorage
 ```javascript
-this._store.sessionStorage = true;
+this._store.saveToSessionStorage = true;
+```
+```javascript
+this._store.saveToSessionStorage = true;
 ```
 
 ## localStorage
 save the store to the localStorage
 ```javascript
-this._store.localStorage = true;
+this._store.saveToLocalStorage = true;
 ```
+
+## Get data from the storage 
+to restore from localStorage or from sessionStorage use getStoreFromSessionStorage() or getStoreFromLocalStorage()
+don't try to get the value from the storage yourself without the getters (the storage also store metadata)`
+`
 
 ## getHistory()
 Show the history of the state (first you have to set debug to true)
